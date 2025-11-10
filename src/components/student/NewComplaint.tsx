@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,15 +41,14 @@ const NewComplaint = () => {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'tickets'), {
-        ...formData,
-        createdBy: user?.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        status: 'open',
-        upvoteCount: 0,
-        upvotedBy: {},
-      });
+      const { error } = await supabase
+        .from('tickets')
+        .insert({
+          ...formData,
+          created_by: user?.id,
+        });
+
+      if (error) throw error;
 
       toast.success('Complaint submitted successfully!');
       setFormData({
@@ -60,9 +58,9 @@ const NewComplaint = () => {
         description: '',
         visibility: 'private',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting complaint:', error);
-      toast.error('Failed to submit complaint');
+      toast.error(error.message || 'Failed to submit complaint');
     } finally {
       setLoading(false);
     }

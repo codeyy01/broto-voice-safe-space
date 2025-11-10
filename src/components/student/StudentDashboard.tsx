@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +11,7 @@ interface Ticket {
   category: string;
   severity: 'low' | 'medium' | 'critical';
   status: 'open' | 'in_progress' | 'resolved';
-  createdAt: any;
+  created_at: string;
 }
 
 const StudentDashboard = () => {
@@ -23,22 +22,41 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'tickets'),
-      where('createdBy', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
+    const fetchTickets = async () => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ticketsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Ticket[];
-      setTickets(ticketsData);
+      if (!error && data) {
+        setTickets(data as Ticket[]);
+      }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchTickets();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('student-tickets')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `created_by=eq.${user.id}`,
+        },
+        () => {
+          fetchTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const getStatusIcon = (status: string) => {

@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,9 +13,9 @@ interface Ticket {
   severity: 'low' | 'medium' | 'critical';
   status: 'open' | 'in_progress' | 'resolved';
   visibility: 'private' | 'public';
-  upvoteCount: number;
-  createdAt: any;
-  createdBy: string;
+  upvote_count: number;
+  created_at: string;
+  created_by: string;
 }
 
 const AdminDashboard = () => {
@@ -27,32 +25,54 @@ const AdminDashboard = () => {
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'tickets'),
-      orderBy('createdAt', 'desc')
-    );
+    const fetchTickets = async () => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ticketsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Ticket[];
-      setTickets(ticketsData);
+      if (!error && data) {
+        setTickets(data as Ticket[]);
+      }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchTickets();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('admin-tickets')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => {
+          fetchTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'tickets', ticketId), {
-        status: newStatus,
-      });
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: newStatus })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+      
       toast.success('Status updated successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      toast.error(error.message || 'Failed to update status');
     }
   };
 
@@ -68,10 +88,10 @@ const AdminDashboard = () => {
     if (severityOrder[a.severity] !== severityOrder[b.severity]) {
       return severityOrder[a.severity] - severityOrder[b.severity];
     }
-    if (a.upvoteCount !== b.upvoteCount) {
-      return b.upvoteCount - a.upvoteCount;
+    if (a.upvote_count !== b.upvote_count) {
+      return b.upvote_count - a.upvote_count;
     }
-    return b.createdAt?.seconds - a.createdAt?.seconds;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const stats = {
@@ -187,7 +207,7 @@ const AdminDashboard = () => {
                       {ticket.visibility === 'public' && (
                         <Badge variant="outline" className="text-xs">
                           <TrendingUp className="w-3 h-3 mr-1" />
-                          {ticket.upvoteCount} upvotes
+                          {ticket.upvote_count} upvotes
                         </Badge>
                       )}
                     </div>

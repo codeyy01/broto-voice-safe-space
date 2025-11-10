@@ -8,11 +8,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const LoginPage = () => {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [role, setRole] = useState<'student' | 'admin'>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,10 +25,22 @@ const LoginPage = () => {
       return;
     }
     
+    if (mode === 'signup' && !displayName.trim()) {
+      toast.error('Please enter your name');
+      return;
+    }
+    
     setLoading(true);
     try {
-      await signIn(email, password, role);
-      navigate(role === 'student' ? '/student/dashboard' : '/admin/dashboard');
+      if (mode === 'signup') {
+        await signUp(email, password, displayName, role);
+        toast.success('Account created! Please sign in.');
+        setMode('signin');
+        setPassword('');
+      } else {
+        await signIn(email, password, role);
+        navigate(role === 'student' ? '/student/dashboard' : '/admin/dashboard');
+      }
     } catch (error) {
       // Error handling done in context
     } finally {
@@ -73,6 +87,21 @@ const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Full Name</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="Your Name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="h-12"
+                required
+              />
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -95,6 +124,7 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-12"
+              minLength={6}
               required
             />
           </div>
@@ -104,9 +134,25 @@ const LoginPage = () => {
             className="w-full h-12 text-base"
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading 
+              ? (mode === 'signup' ? 'Creating account...' : 'Signing in...')
+              : (mode === 'signup' ? 'Create Account' : 'Sign In')
+            }
           </Button>
         </form>
+
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+            className="text-sm text-primary hover:underline"
+          >
+            {mode === 'signin' 
+              ? "Don't have an account? Sign up" 
+              : 'Already have an account? Sign in'
+            }
+          </button>
+        </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Your voice matters. We're here to listen.

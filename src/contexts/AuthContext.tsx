@@ -1,20 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface UserData {
   role: 'student' | 'admin';
-  displayName: string;
+  displayName: string | null;
   email: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   userData: UserData | null;
   loading: boolean;
   signIn: (email: string, password: string, role: 'student' | 'admin') => Promise<void>;
+  signUp: (email: string, password: string, displayName: string, role: 'student' | 'admin') => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -30,46 +31,110 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserData);
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile data
+          setTimeout(async () => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (profile) {
+              setUserData({
+                role: profile.role,
+                displayName: profile.display_name,
+                email: profile.email,
+              });
+            }
+          }, 0);
+        } else {
+          setUserData(null);
         }
-      } else {
-        setUserData(null);
       }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       
-      setLoading(false);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUserData({
+                role: profile.role,
+                displayName: profile.display_name,
+                email: profile.email,
+              });
+            }
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
     });
 
-    return unsubscribe;
+    return () => subscription.unsubscribe();
   }, []);
+
+  const signUp = async (email: string, password: string, displayName: string, role: 'student' | 'admin') => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+            role: role,
+          },
+        },
+      });
+
+      if (error) throw error;
+      
+      toast.success('Account created successfully!');
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      toast.error(error.message || 'Failed to create account');
+      throw error;
+    }
+  };
 
   const signIn = async (email: string, password: string, role: 'student' | 'admin') => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
       
-      if (!userDoc.exists()) {
-        await firebaseSignOut(auth);
-        throw new Error('User profile not found');
-      }
+      // Check if role matches
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
       
-      const userDataFromDb = userDoc.data() as UserData;
-      
-      if (userDataFromDb.role !== role) {
-        await firebaseSignOut(auth);
+      if (profile && profile.role !== role) {
+        await supabase.auth.signOut();
         throw new Error(`Invalid credentials for ${role} login`);
       }
       
@@ -83,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await supabase.auth.signOut();
       toast.success('Signed out successfully');
     } catch (error: any) {
       console.error('Sign out error:', error);
@@ -93,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, userData, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

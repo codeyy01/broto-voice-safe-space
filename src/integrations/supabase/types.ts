@@ -132,7 +132,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrement_upvote_count: {
+        Args: { ticket_id: string }
+        Returns: undefined
+      }
+      increment_upvote_count: {
+        Args: { ticket_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "student" | "admin"
