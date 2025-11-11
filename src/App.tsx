@@ -9,6 +9,7 @@ import StudentLayout from "@/components/student/StudentLayout";
 import StudentDashboard from "@/components/student/StudentDashboard";
 import NewComplaint from "@/components/student/NewComplaint";
 import CommunityFeed from "@/components/student/CommunityFeed";
+import ProfilePage from "@/components/student/ProfilePage";
 import AdminLayout from "@/components/admin/AdminLayout";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="new" element={<NewComplaint />} />
               <Route path="history" element={<StudentDashboard />} />
               <Route path="community" element={<CommunityFeed />} />
+              <Route path="profile" element={<ProfilePage />} />
             </Route>
             
             <Route path="/admin" element={<AdminLayout />}>

@@ -4,14 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp } from 'lucide-react';
+import { ThumbsUp, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDistanceToNow, format, isAfter, subWeeks } from 'date-fns';
 
 interface Ticket {
   id: string;
   title: string;
+  description: string;
   category: string;
   severity: 'low' | 'medium' | 'critical';
+  status: 'open' | 'in_progress' | 'resolved';
   upvote_count: number;
   created_at: string;
 }
@@ -118,6 +121,50 @@ const CommunityFeed = () => {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'open':
+        return <AlertCircle className="w-5 h-5 text-status-open" />;
+      case 'in_progress':
+        return <Clock className="w-5 h-5 text-status-progress" />;
+      case 'resolved':
+        return <CheckCircle2 className="w-5 h-5 text-status-resolved" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, string> = {
+      open: 'bg-status-open/10 text-status-open border-status-open/20',
+      in_progress: 'bg-status-progress/10 text-status-progress border-status-progress/20',
+      resolved: 'bg-status-resolved/10 text-status-resolved border-status-resolved/20',
+    };
+
+    const labels: Record<string, string> = {
+      open: 'Open',
+      in_progress: 'In Progress',
+      resolved: 'Resolved',
+    };
+
+    return (
+      <Badge variant="outline" className={variants[status]}>
+        {labels[status]}
+      </Badge>
+    );
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const oneWeekAgo = subWeeks(new Date(), 1);
+    
+    if (isAfter(date, oneWeekAgo)) {
+      return formatDistanceToNow(date, { addSuffix: true });
+    } else {
+      return format(date, 'MMM d, yyyy');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -163,26 +210,36 @@ const CommunityFeed = () => {
                     <span className="text-xs font-semibold">{ticket.upvote_count}</span>
                   </Button>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground mb-2">
-                      {ticket.title}
-                    </h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        {ticket.category}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          ticket.severity === 'critical'
-                            ? 'border-severity-critical text-severity-critical'
-                            : ticket.severity === 'medium'
-                            ? 'border-severity-medium text-severity-medium'
-                            : 'border-severity-low text-severity-low'
-                        }`}
-                      >
-                        {ticket.severity}
-                      </Badge>
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {getStatusIcon(ticket.status)}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground mb-1">
+                        {ticket.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                        {ticket.description}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {ticket.category}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            ticket.severity === 'critical'
+                              ? 'border-severity-critical text-severity-critical'
+                              : ticket.severity === 'medium'
+                              ? 'border-severity-medium text-severity-medium'
+                              : 'border-severity-low text-severity-low'
+                          }`}
+                        >
+                          {ticket.severity}
+                        </Badge>
+                        {getStatusBadge(ticket.status)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimestamp(ticket.created_at)}
+                      </p>
                     </div>
                   </div>
                 </div>

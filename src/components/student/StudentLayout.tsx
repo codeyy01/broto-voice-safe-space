@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, PlusCircle, History, Users, LogOut } from 'lucide-react';
+import { Home, PlusCircle, History, Users, User, LogOut, Menu } from 'lucide-react';
 
 const StudentLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const navItems = [
     { path: '/student/dashboard', label: 'Dashboard', icon: Home },
     { path: '/student/new', label: 'New', icon: PlusCircle },
     { path: '/student/history', label: 'History', icon: History },
     { path: '/student/community', label: 'Community', icon: Users },
+    { path: '/student/profile', label: 'Profile', icon: User },
   ];
 
   const handleSignOut = async () => {
@@ -26,10 +29,45 @@ const StudentLayout = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-foreground">
-            Student Voice
-          </h1>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          <div className="flex items-center gap-3">
+            {/* Hamburger Menu - Tablet Only */}
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="md:flex lg:hidden hidden">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="p-4 space-y-2">
+                  <h2 className="text-lg font-semibold mb-4 text-foreground">Navigation</h2>
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    
+                    return (
+                      <Button
+                        key={item.path}
+                        variant={isActive ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          navigate(item.path);
+                          setSheetOpen(false);
+                        }}
+                      >
+                        <Icon className="w-4 h-4 mr-3" />
+                        {item.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <h1 className="text-xl font-semibold text-foreground">
+              Student Voice
+            </h1>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="md:flex lg:hidden hidden">
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>
@@ -41,7 +79,7 @@ const StudentLayout = () => {
         <Outlet />
       </main>
 
-      {/* Bottom Navigation - Mobile */}
+      {/* Bottom Navigation - Mobile Only */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border md:hidden">
         <div className="flex items-center justify-around p-2">
           {navItems.map((item) => {
@@ -66,8 +104,8 @@ const StudentLayout = () => {
         </div>
       </nav>
 
-      {/* Desktop Navigation */}
-      <nav className="hidden md:block fixed left-0 top-[73px] bottom-0 w-64 bg-card border-r border-border">
+      {/* Desktop Sidebar - Large Screens Only */}
+      <nav className="hidden lg:block fixed left-0 top-[73px] bottom-0 w-64 bg-card border-r border-border">
         <div className="p-4 space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -90,7 +128,7 @@ const StudentLayout = () => {
 
       {/* Desktop Content Offset */}
       <style>{`
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           main {
             margin-left: 16rem;
           }

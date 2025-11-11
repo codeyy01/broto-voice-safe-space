@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { formatDistanceToNow, format, isAfter, subWeeks } from 'date-fns';
 
 interface Ticket {
   id: string;
@@ -92,6 +93,17 @@ const StudentDashboard = () => {
     );
   };
 
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const oneWeekAgo = subWeeks(new Date(), 1);
+    
+    if (isAfter(date, oneWeekAgo)) {
+      return `submitted ${formatDistanceToNow(date, { addSuffix: true })}`;
+    } else {
+      return `submitted on ${format(date, 'MMM d, yyyy')}`;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -124,13 +136,13 @@ const StudentDashboard = () => {
               className="p-6 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
+                  <div className="flex items-start gap-3 flex-1">
                   {getStatusIcon(ticket.status)}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground mb-1">
                       {ticket.title}
                     </h3>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
                       <Badge variant="secondary" className="text-xs">
                         {ticket.category}
                       </Badge>
@@ -147,6 +159,9 @@ const StudentDashboard = () => {
                         {ticket.severity}
                       </Badge>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatTimestamp(ticket.created_at)}
+                    </p>
                   </div>
                 </div>
                 {getStatusBadge(ticket.status)}
