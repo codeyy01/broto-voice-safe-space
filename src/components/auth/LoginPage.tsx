@@ -12,7 +12,6 @@ const LoginPage = () => {
   const [role, setRole] = useState<'student' | 'admin'>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -25,15 +24,10 @@ const LoginPage = () => {
       return;
     }
     
-    if (mode === 'signup' && !displayName.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-    
     setLoading(true);
     try {
       if (mode === 'signup') {
-        await signUp(email, password, displayName, role);
+        await signUp(email, password);
         toast.success('Account created! Please sign in.');
         setMode('signin');
         setPassword('');
@@ -60,47 +54,35 @@ const LoginPage = () => {
           </p>
         </div>
 
-        {/* Role Toggle */}
-        <div className="flex gap-2 mb-8 p-1 bg-secondary rounded-xl">
-          <button
-            type="button"
-            onClick={() => setRole('student')}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-              role === 'student'
-                ? 'bg-card text-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            I am a Student
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole('admin')}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-              role === 'admin'
-                ? 'bg-card text-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            I am Staff
-          </button>
-        </div>
+        {/* Role Toggle - Only shown during sign in */}
+        {mode === 'signin' && (
+          <div className="flex gap-2 mb-8 p-1 bg-secondary rounded-xl">
+            <button
+              type="button"
+              onClick={() => setRole('student')}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                role === 'student'
+                  ? 'bg-card text-primary shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              I am a Student
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('admin')}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                role === 'admin'
+                  ? 'bg-card text-primary shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              I am Staff
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {mode === 'signup' && (
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Full Name</Label>
-              <Input
-                id="displayName"
-                type="text"
-                placeholder="Your Name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-          )}
           
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
