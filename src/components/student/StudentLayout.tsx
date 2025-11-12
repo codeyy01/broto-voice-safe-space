@@ -14,7 +14,6 @@ const StudentLayout = () => {
   const navItems = [
     { path: '/student/dashboard', label: 'Dashboard', icon: Home },
     { path: '/student/new', label: 'New', icon: PlusCircle },
-    { path: '/student/history', label: 'History', icon: History },
     { path: '/student/community', label: 'Community', icon: Users },
     { path: '/student/profile', label: 'Profile', icon: User },
   ];

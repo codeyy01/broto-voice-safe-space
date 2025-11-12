@@ -126,14 +126,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       
-      // Check if role matches
-      const { data: profile } = await supabase
-        .from('profiles')
+      // Check if role matches using user_roles table
+      const { data: userRole } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('id', data.user.id)
-        .single();
+        .eq('user_id', data.user.id)
+        .eq('role', role)
+        .maybeSingle();
       
-      if (profile && profile.role !== role) {
+      if (!userRole) {
         await supabase.auth.signOut();
         throw new Error(`Invalid credentials for ${role} login`);
       }

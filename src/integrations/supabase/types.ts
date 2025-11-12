@@ -84,6 +84,7 @@ export type Database = {
           created_by: string
           description: string
           id: string
+          image_url: string | null
           severity: string
           status: string
           title: string
@@ -97,6 +98,7 @@ export type Database = {
           created_by: string
           description: string
           id?: string
+          image_url?: string | null
           severity: string
           status?: string
           title: string
@@ -110,6 +112,7 @@ export type Database = {
           created_by?: string
           description?: string
           id?: string
+          image_url?: string | null
           severity?: string
           status?: string
           title?: string
@@ -127,6 +130,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -135,6 +159,13 @@ export type Database = {
       decrement_upvote_count: {
         Args: { ticket_id: string }
         Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       increment_upvote_count: {
         Args: { ticket_id: string }

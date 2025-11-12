@@ -16,6 +16,7 @@ interface Ticket {
   upvote_count: number;
   created_at: string;
   created_by: string;
+  image_url: string | null;
 }
 
 const AdminDashboard = () => {
@@ -185,7 +186,7 @@ const AdminDashboard = () => {
           {sortedTickets.map((ticket) => (
             <Card key={ticket.id} className="p-6">
               <div className="flex flex-col md:flex-row md:items-start gap-4">
-                <div className="flex-1 space-y-3">
+               <div className="flex-1 space-y-3">
                   <div>
                     <h3 className="font-semibold text-foreground mb-2">{ticket.title}</h3>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -211,6 +212,15 @@ const AdminDashboard = () => {
                         </Badge>
                       )}
                     </div>
+                    {ticket.image_url && (
+                      <div className="mt-3">
+                        <img 
+                          src={ticket.image_url} 
+                          alt="Evidence" 
+                          className="w-24 h-24 object-cover rounded border border-border"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
